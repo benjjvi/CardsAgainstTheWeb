@@ -1,0 +1,80 @@
+<!-- lobby.html -->
+{% extends 'main.html' %}
+
+{% block content %}
+<h1>Active Lobbies</h1>
+
+<!-- Section to create a room -->
+<h2>Create a Room</h2>
+<form id="create-room-form">
+    <label for="room-name">Room Name:</label>
+    <input type="text" id="room-name" name="room-name" required>
+    <button type="submit">Create Room</button>
+</form>
+
+{% if rooms|length == 0 %}
+    <p>No rooms found</p>
+{% else %}
+    {% for room_id, room_info in rooms.items() %}
+        <div class="room-box">
+            <h3>Room ID: {{ room_id }}</h3>
+            <h4>Room Name: {{ room_info['roomname'] }}</h4>
+            <p>Players {{ room_info['room_players'] | length }} / {{ room_info['max'] }}: {{ room_info['room_players'] | join(', ') }}</p>
+            <p>Active Sets: {{ room_info['setsactive'] | length }}</p>
+            <!-- 'Join' button within each room box -->
+            <!-- <button class="join-button">Join</button> -->
+            <a href="{{ url_for('play', room_id=room_id) }}" class="join-button">Join</a>
+        </div>
+    {% endfor %}
+{% endif %}
+
+
+<script>
+    var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+    // Function to create a new room
+    document.getElementById('create-room-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        var roomName = document.getElementById('room-name').value;
+        
+        // Retrieve username from the cookie
+        var username = getCookie('user');
+        
+        socket.emit('create_room', { room_name: roomName, username: username });
+        document.getElementById('room-name').value = ''; // Clear input after creation
+    });
+
+    // Handle room creation confirmation or display error
+    socket.on('room_created', function(data) {
+        // Handle success message or update room list
+        console.log('Room created:', data);
+
+        // Redirect to the play page after room creation
+        if (data.host == getCookie('user')) {
+            window.location.href = '/play/' + data.room_id; // Redirect to the play page with the room ID
+        }
+    });
+
+    socket.on('room_creation_error', function(data) {
+        // Handle error message or display error to the user
+        console.error('Error creating room:', data.error);
+    });
+
+    // Function to get a specific cookie by name
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+
+{% endblock %}

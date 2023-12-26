@@ -1,0 +1,23 @@
+<!-- play.html -->
+{% extends 'main.html' %}
+
+{% block content %}
+<h1>Play</h1>
+<h2>Room Name: {{ room.roomname }}</h2>
+<h3>Players:</h3>
+<ul id="player-list">
+    {% for player in room.room_players %}
+        <li>{{ player }}</li>
+    {% endfor %}
+</ul>
+
+<!-- Chatbox -->
+<div class="chat-container" id="chat-container">
+    <!-- Messages will appear here -->
+</div>
+<input type="text" id="chat-input" placeholder="Type your message">
+<button onclick="sendMessage()">Send</button>
+
+<!-- Start Game Button -->
+<button onclick="startGame()">Start Game</button>
+{% endblock %}

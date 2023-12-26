@@ -1,0 +1,26 @@
+<!-- main.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}CardsAgainstTheWeb | CATW{% endblock %}</title>
+
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo&display=swap">
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.js"></script>
+    <script src="{{ url_for('static', filename='socketflask.js') }}"></script>
+</head>
+<body>
+    {% include 'header.html' %} <!-- Include the header template -->
+    
+    <!-- Main content of the page -->
+    <main>
+        {% block content %}
+        <!-- Your specific page content goes here -->
+        {% endblock %}
+    </main>
+    
+    {% include 'footer.html' %} <!-- Include the footer template -->
+</body>
+</html>
