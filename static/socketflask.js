@@ -1,24 +1,18 @@
-var socket = io.connect('http://' + document.domain + ':' + location.port);
+var socket = io.connect("http://" + location.hostname + ":" + location.port);
 
-var user = getCookie('user');
-console.log('Value of "user" cookie:', user);
+var user = getCookie("user");
 socket.emit("confirmalive", user);
-
-// Function to join a room (similar to previous example)
-function joinRoom(roomId, username) {
-    socket.emit('join_room', { room_id: roomId, username: username });
-}
 
 function getCookie(cookieName) {
     // Split the document.cookie string into individual cookies
-    var cookies = document.cookie.split(';');
+    var cookies = document.cookie.split(";");
 
     // Loop through the cookies to find the desired cookie
     for (var i = 0; i < cookies.length; i++) {
         var cookie = cookies[i].trim(); // Remove leading/trailing spaces
 
         // Check if this cookie is the one we're looking for
-        if (cookie.startsWith(cookieName + '=')) {
+        if (cookie.startsWith(cookieName + "=")) {
             // Extract and return the value of the cookie
             return cookie.substring(cookieName.length + 1); // Add 1 to skip '=' character
         }
@@ -29,24 +23,52 @@ function getCookie(cookieName) {
 }
 
 // Socket event for updating room_players (similar to previous example)
-socket.on('update_room_players', function(data) {
+socket.on("update_room_players", function (data) {
     var updatedPlayers = data.players;
     // Clear the current user list in the UI (example: assuming an element with id 'user-list')
-    var userList = document.getElementById('player-list');
-    userList.innerHTML = '';
+    var userList = document.getElementById("player-list");
+    userList.innerHTML = "";
 
     // Update the user list in the UI with the updated players
-    updatedPlayers.forEach(function(player) {
-        var listItem = document.createElement('li');
+    updatedPlayers.forEach(function (player) {
+        var listItem = document.createElement("li");
         listItem.textContent = player;
         userList.appendChild(listItem);
     });
 });
 
-socket.on("client_disconnect", function() {
+socket.on("deadclientremoved", function (jsonDatastr) {
+    var currentRoomId = getRoomId(); // Replace 'currentRoomId' with the actual room ID of the client
+    jsonData = JSON.parse(jsonDatastr)
+    console.log(currentRoomId)
+    console.log(jsonData)
+
+    // Iterate through the received rooms information to find the client's room
+    for (var roomId in jsonData) {
+        console.log(roomId)
+        if (roomId === currentRoomId) {
+            var updatedPlayers = jsonData[roomId]["room_players"];
+            console.log(updatedPlayers)
+
+            // Clear and update the user list in the UI (example: assuming an element with id 'player-list')
+            var userList = document.getElementById("player-list");
+            userList.innerHTML = "";
+
+            updatedPlayers.forEach(function (player) {
+                var listItem = document.createElement("li");
+                listItem.textContent = player;
+                userList.appendChild(listItem);
+            });
+
+            // Exit the loop once the client's room is found and updated
+            break;
+        }
+    }
+});
+
+socket.on("client_disconnect", function () {
     // Usage example:
-    var user = getCookie('user');
-    console.log('Value of "user" cookie:', user);
+    var user = getCookie("user");
     socket.emit("confirmalive", user);
 });
 
@@ -55,28 +77,39 @@ function getRoomId() {
     // Get the current URL
     var currentURL = window.location.href;
     // Extract the room ID from the URL
-    var roomID = currentURL.substring(currentURL.lastIndexOf('/') + 1);
-    return roomID
+    var roomID = currentURL.substring(currentURL.lastIndexOf("/") + 1);
+
+    if (roomID == "lobby" || roomID == "play" || roomID == location.hostname) {
+        return "0xDB"; // this placeholder physically cannot be a room ID
+    } else {
+        return roomID;
+    }
 }
 
 // Function to send a chat message
 function sendMessage() {
-    var message = document.getElementById('chat-input').value;
-    var username = getCookie('user'); // Retrieve username from the cookie
-    roomID = getRoomId()
-    socket.emit('chat_message', { message: message, username: username, room: roomID});
-    document.getElementById('chat-input').value = ''; // Clear input after sending
+    var message = document.getElementById("chat-input").value;
+    var username = getCookie("user"); // Retrieve username from the cookie
+    roomID = getRoomId();
+    socket.emit("chat_message", {
+        message: message,
+        username: username,
+        room: roomID,
+    });
+    document.getElementById("chat-input").value = ""; // Clear input after sending
 }
 
 // Function to get a specific cookie by name
 function getCookie(name) {
     var cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        var cookies = document.cookie.split(';');
+    if (document.cookie && document.cookie !== "") {
+        var cookies = document.cookie.split(";");
         for (var i = 0; i < cookies.length; i++) {
             var cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            if (cookie.substring(0, name.length + 1) === name + "=") {
+                cookieValue = decodeURIComponent(
+                    cookie.substring(name.length + 1)
+                );
                 break;
             }
         }
@@ -85,21 +118,16 @@ function getCookie(name) {
 }
 
 // Handle received chat messages
-socket.on('chat_message', function(data) {
-    roomID = getRoomId()
-    console.log(roomID)
-    console.log(data.room)
+socket.on("chat_message", function (data) {
+    roomID = getRoomId();
     if (data.room == roomID) {
-        var chatContainer = document.getElementById('chat-container');
-        var messageElement = document.createElement('p');
-        
-        messageElement.classList.add('chat-message');
-        messageElement.textContent = data.username + ': ' + data.message;
+        var chatContainer = document.getElementById("chat-container");
+        var messageElement = document.createElement("p");
+
+        messageElement.classList.add("chat-message");
+        messageElement.textContent = data.username + ": " + data.message;
         chatContainer.appendChild(messageElement);
         chatContainer.scrollTop = chatContainer.scrollHeight; // Scroll to the bottom
-
-    } else {
-        console.log(data)
     }
 });
 

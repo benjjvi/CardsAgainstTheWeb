@@ -24,14 +24,32 @@ socketio = SocketIO(app, manage_session=True)
 rooms = {}
 allusers = []
 confirmed = []
+threadRunning = False
 
+
+def removeDeadPlayers(allusers, deadusers):
+    for room in rooms:
+        for player in rooms[room]["room_players"]:
+            if player in deadusers:
+                rooms[room]["room_players"].remove(player)
+
+    allusers = list(set(allusers) - set(deadusers))
+
+    return allusers
 
 def check_users_presence():
-    global confirmed
+    global confirmed, threadRunning, allusers
+    threadRunning = True
     time.sleep(2.5)  # Wait for 2 seconds to collect responses
     not_confirmed = list(set(allusers) - set(confirmed))
+
     print("Users who haven't confirmed:", not_confirmed)
+
+    threadRunning = False
     confirmed = []
+
+    allusers = removeDeadPlayers(allusers, not_confirmed)
+
     return not_confirmed
 
 # 4. set up routes
@@ -43,21 +61,28 @@ def handle_connect():
 @socketio.on("disconnect")
 def handle_disconnect():
     print(f"Client {request.sid} disconnected")
-    emit("client_disconnect", "a", broadcast=True)
-    t = threading.Thread(target=check_users_presence)
-    t.start()
+    if not threadRunning:
+        emit("client_disconnect", "a", broadcast=True)
+        t = threading.Thread(target=check_users_presence)
+        t.start()
+        t.join()
+        emit("deadclientremoved", json.dumps(rooms), broadcast=True)
+    else:
+        print("Tried to check thread, but thread already alive.")
 
 @socketio.on("confirmalive")
 def confirmalive(username):
     print(f"User {username} confirmed alive.")
     confirmed.append(username)
+    if username not in allusers:
+        allusers.append(username)
 
 
 @socketio.on("message_from_client")
 def handle_message(message):
     print("Received message:", message)
     # Broadcast the received message to all clients
-    socketio.emit("message_from_server", message, broadcast=True)
+    emit("message_from_server", message, broadcast=True)
 
 
 @socketio.on("join_room")
@@ -67,10 +92,11 @@ def handle_join_room(data):
 
     # Add the user to the room (for demonstration purposes)
     if room_id in rooms:
-        rooms[room_id]["players"].append(username)
+        print(rooms[room_id])
+        #rooms[room_id]["room_players"].append(username)
         emit(
             "update_room_players",
-            {"room_id": room_id, "players": rooms[room_id]["players"]},
+            {"room_id": room_id, "players": rooms[room_id]["room_players"]},
             broadcast=True,
         )
 

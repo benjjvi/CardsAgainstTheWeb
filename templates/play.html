@@ -20,4 +20,11 @@
 
 <!-- Start Game Button -->
 <button onclick="startGame()">Start Game</button>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        socket.emit('join_room', { room_id: getRoomId(), username: getCookie('user') });
+});
+</script>
+
 {% endblock %}
