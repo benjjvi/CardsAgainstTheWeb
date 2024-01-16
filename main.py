@@ -24,6 +24,7 @@ socketio = SocketIO(app, manage_session=True)
 rooms = {}
 allusers = []
 confirmed = []
+dead = []
 threadRunning = False
 
 
@@ -38,7 +39,7 @@ def removeDeadPlayers(allusers, deadusers):
     return allusers
 
 def check_users_presence():
-    global confirmed, threadRunning, allusers
+    global confirmed, threadRunning, allusers, dead
     threadRunning = True
     time.sleep(2.5)  # Wait for 2 seconds to collect responses
     not_confirmed = list(set(allusers) - set(confirmed))
@@ -50,6 +51,7 @@ def check_users_presence():
 
     allusers = removeDeadPlayers(allusers, not_confirmed)
 
+    dead = not_confirmed
     return not_confirmed
 
 # 4. set up routes
@@ -66,7 +68,9 @@ def handle_disconnect():
         t = threading.Thread(target=check_users_presence)
         t.start()
         t.join()
-        emit("deadclientremoved", json.dumps(rooms), broadcast=True)
+        if len(dead) != 0:
+            emit("deadclientremoved", json.dumps(rooms), broadcast=True)
+            dead = []
     else:
         print("Tried to check thread, but thread already alive.")
 
